@@ -1,13 +1,14 @@
 # frozen_string_literal: true
 
-require 'avro'
+require 'json'
 
 module Deimos
-  # base class of the schema classes generated from Avro Schemas
+  # base class of the schema classes generated from the schema backend.
   class SchemaModel
-    # @param payload [Hash] Decoded payload.
-    def self.initialize(payload)
-      @payload = payload
+
+    # :nodoc:
+    def initialize
+      @validator = Deimos.schema_backend(schema: schema, namespace: namespace)
     end
 
     # Returns the schema name of the inheriting class.
@@ -16,11 +17,45 @@ module Deimos
       raise NotImplementedError
     end
 
-    # @param payload [Hash] Decoded payload.
-    def validate(payload)
-      Avro::SchemaValidator.validate!(avro_schema(schema), payload,
-                                      recursive: true,
-                                      fail_on_extra_fields: true)
+    # Returns the namespace for the schema of the inheriting class.
+    # @return [String]
+    def namespace
+      raise NotImplementedError
+    end
+
+    # Returns the full schema name of the inheriting class.
+    # @return [String]
+    def full_schema
+      namespace + '.' + schema
+    end
+
+    # @return [Array<String>] an array of fields names in the schema.
+    def schema_fields
+      @validator.schema_fields.map do |field|
+        field.name
+      end
+    end
+
+    # @override
+    def to_json(options={})
+      to_h.to_json
+    end
+
+    # @override
+    def as_json(options={})
+      to_h
+    end
+
+    # Converts the object to a hash which can be used in Kafka.
+    def as_hash
+      JSON.parse(to_json)
+    end
+
+    private
+
+    # @return [Object] the payload as a hash.
+    def to_h
+      raise NotImplementedError
     end
 
   end

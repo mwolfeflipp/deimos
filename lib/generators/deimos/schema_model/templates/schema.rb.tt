@@ -1,16 +1,38 @@
 module Deimos
   # :nodoc:
-  class <%= schema.classify %>Schema < SchemaModel
-  <%- fields.select { |f| f.enum_values.any? }.each do |field| -%>enum <%= field.name %>: {<%= field.enum_values.map { |v| "#{v}: '#{v}'"}.join(', ') %>}<% end -%>
-
-  <%- fields.each do |field| -%>
-    def <%= field.name %>
-      @payload['<%= field.name %>']{<%= field.enum_values.map { |v| "#{v}: '#{v}'"}.join(', ') %>}
+  class <%= classified_schema(@current_schema, @current_record) %> < SchemaModel
+<%- fields.each do |field| -%>
+    # @!attribute [rw] status
+    # @return [<%= field_type(field) %>]
+    attr_accessor :<%= field.name %>
 <% end -%>
 
     # @override
-    def schema
-      '<%= full_schema %>'
+    def initialize(<%= fields.map { |v| "#{v.name}:"}.join(', ') %>)
+      super()
+<%- fields.map { |v| "@#{v.name} = #{v.name}"}.each do |field| -%>
+      <%= field %>
+<% end -%>
     end
+
+    # @override
+    def schema
+      '<%= schema(@current_schema) %>'
+    end
+
+    # @override
+    def namespace
+      '<%= namespace(@current_schema) %>'
+    end
+
+    # @override
+    def to_h
+      {
+<%- fields.each do |field| -%>
+        '<%= field.name %>' => @<%= field.name %>,
+<% end -%>
+      }
+    end
+
   end
 end
